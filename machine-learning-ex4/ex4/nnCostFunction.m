@@ -64,16 +64,17 @@ Theta2_grad = zeros(size(Theta2));
 
 tmpJ = 0;
 
-z2 = [ones(m, 1), X] * Theta1';
-a2 = sigmoid(z2);
-z3 = [ones(m, 1), a2] * Theta2';
+a1 = [ones(m, 1), X];
+z2 = a1 * Theta1';
+a2 = [ones(m, 1), sigmoid(z2)];
+z3 = a2 * Theta2';
 a3 = sigmoid(z3);
 
-y_vector = eye(10);
+yEye = eye(10);
 
 for i = 1:m
     for k = 1:num_labels
-        yk = y_vector(k, y(i));
+        yk = yEye(k, y(i));
         hk = a3(i, k);
         tmpJ = tmpJ + (-yk * log(hk) - (1-yk) * log(1-hk));
     end
@@ -84,6 +85,28 @@ Theta2NoBias = Theta2(:, 2:end);
 
 J = tmpJ / m + (lambda / (2 * m)) * (sum(sum(Theta1NoBias .^ 2)) + sum(sum(Theta2NoBias .^ 2)));
 
+Delta1 = zeros(size(Theta1));
+Delta2 = zeros(size(Theta2));
+
+yVector = repmat([1:num_labels], m, 1) == repmat(y, 1, num_labels);
+delta3 = a3 - yVector;
+delta2 = (delta3 * Theta2)(:, 2:end) .* sigmoidGradient(z2);
+for i = 1:m
+    a_1 = [1 X(i, :)]';
+    z_2 = Theta1 * a_1;
+    a_2 = [1; sigmoid(z_2)];
+    a_3 = sigmoid(Theta2 * a_2);
+
+    delta3 = a_3 - yVector(i, :)';
+    delta2 = (Theta2' * delta3)(2:end, :) .* sigmoidGradient(z_2);
+    Delta1 = Delta1 + delta2 * a_1';
+    Delta2 = Delta2 + delta3 * a_2';
+end
+
+Theta1ZeroBias = [zeros(size(Theta1, 1), 1) Theta1NoBias];
+Theta2ZeroBias = [zeros(size(Theta2, 1), 1) Theta2NoBias];
+Theta1_grad = 1 / m * sum(sum(Delta1)) + (lambda / m) * Theta1ZeroBias;
+Theta2_grad = 1 / m * sum(sum(Delta2)) + (lambda / m) * Theta2ZeroBias;
 
 % -------------------------------------------------------------
 
